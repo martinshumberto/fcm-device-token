@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>FCM</title>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getToken, getMessaging } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
+    import firebaseConfig from "./firebase-config.js";
+    import "./register-service-worker.js"
+
+    export const MessagingStatus = {
+      UNAVAILABLE: {
+        success: false,
+        retryable: false,
+        message:
+          'This browser does not support desktop notifications. Please use a different browser or the download prelude connect app'
+      },
+      DENIED: {
+        success: false,
+        retryable: true,
+        message: 'Messaging requires notification permissions'
+      },
+      UNKNOWN_ERROR: (msg) => ({
+        success: false,
+        retryable: true,
+        message: `Unknown error initializing messages: ${msg}`
+      }),
+      GRANTED: {
+        success: true
+      }
+    };
+
+
+    const app = initializeApp(firebaseConfig);
+    const messaging = getMessaging(app);
+
+    export const getNotificationPermissions = (silent) =>
+      new Promise((resolve, reject) => {
+        if (!('Notification' in window)) {
+          return reject(MessagingStatus.UNAVAILABLE);
+        }
+        if (Notification.permission === 'granted') {
+          return resolve();
+        }
+
+        return Notification.requestPermission()
+          .then((perm) => {
+            if (perm === 'granted') {
+              resolve();
+            } else {
+              reject(MessagingStatus.DENIED);
+            }
+          })
+          .catch((e) => reject(MessagingStatus.UNKNOWN_ERROR(e)));
+      });
+
+    getNotificationPermissions(false)
+      .then(
+        async () =>
+          await getToken(messaging, {
+            vapidKey:
+              'BCR7QJkfwnqMAfcvff9AXUdHAQfVAk8ckc0FyZjEt24dK8zdLqNOg0UwUhg5dVwXdBw7AJW8qwuvsw-42sUQHF0'
+          }).then((currentToken) => {
+            if (currentToken) {
+              console.log('currentToken', currentToken);
+            } else {
+              console.log('No registration token available. Request permission to generate one.');
+            }
+          })
+      )
+
+  </script>
+</head>
+
+<body>
+  <h1>FCM</h1>
+</body>
+
+</html>
